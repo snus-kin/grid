@@ -99,3 +99,25 @@ function AdditiveSynth() {
         },
     };
 }
+
+// TODO GRANULAR
+/*
+const churchPlayer = new Tone.GrainPlayer({
+    url: "samples/church.wav",
+    loop: true,
+    grainSize: 0.1,
+    overlap: 0.5,
+}).toDestination();
+
+const bellPlayer = new Tone.GrainPlayer({
+    url: "samples/bell.wav",
+    loop: true,
+    grainSize: 0.1,
+    overlap: 1,
+}).toDestination();
+
+churchPlayer.sync().start(0).stop(50);
+bellPlayer.sync().start(0).stop(50);
+
+Tone.Transport.loop = true;
+*/

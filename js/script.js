@@ -1,24 +1,34 @@
-// TODO GRANULAR
-/*
-const churchPlayer = new Tone.GrainPlayer({
-    url: "samples/church.wav",
-    loop: true,
-    grainSize: 0.1,
-    overlap: 0.5,
-}).toDestination();
+/* 
+ * =======
+ * Utility
+ * =======
+ */
+function setMove(k, b) {
+    if (k == 'w') { isUp = b };
+    if (k == 's') { isDown = b };
+    if (k == 'a') { isLeft = b };
+    if (k == 'd') { isRight = b };
+    if (k == 'e') { isIn = b };
+    if (k == 'c') { isOut = b };
+    if (k == 'q') { isGridUp = b};
+    if (k == 'z') { isGridDown = b};
+    if (k == 'i') { isNoiseUp = b};
+    if (k == 'k') { isNoiseDown = b};
+}
 
-const bellPlayer = new Tone.GrainPlayer({
-    url: "samples/bell.wav",
-    loop: true,
-    grainSize: 0.1,
-    overlap: 1,
-}).toDestination();
+function limit(value, amplitude) {
+    // simple sine limit ('circular modulo')
+    return amplitude * sin((PI / amplitude) * value);
+}
 
-churchPlayer.sync().start(0).stop(50);
-bellPlayer.sync().start(0).stop(50);
-
-Tone.Transport.loop = true;
-*/
+function toggleTransport() {
+  Tone.Transport.toggle();
+  if (Tone.Transport.state === "stopped") {
+    voices.forEach((synth) => {
+      synth.triggerRelease();
+    });
+  }
+}
 
 /*
  * ============
@@ -49,33 +59,6 @@ const synthm = new AdditiveSynth();
 const voices = [synthb, synthm];
 
 const initialOscs = voices[0].getOscs();
-/* 
- * =======
- * Utility
- * =======
- */
-function setMove(k, b) {
-    if (k == 'w') { isUp = b };
-    if (k == 's') { isDown = b };
-    if (k == 'a') { isLeft = b };
-    if (k == 'd') { isRight = b };
-    if (k == 'e') { isIn = b };
-    if (k == 'c') { isOut = b };
-}
-
-function limit(value, amplitude) {
-    return amplitude * sin((PI / amplitude) * value);
-}
-
-function toggleTransport() {
-  // toggles the transportthe transport
-  Tone.Transport.toggle();
-  if (Tone.Transport.state === "stopped") {
-    voices.forEach((synth) => {
-      synth.triggerRelease();
-    });
-  }
-}
 
 /* 
  * ===============
@@ -86,19 +69,20 @@ function toggleTransport() {
 var x = 0;
 var y = 0;
 var z = 0;
+var noiseMultiplier = 0;
 var interval;
 
-var isUp, isDown, isLeft, isRight, isIn, isOut;
+var isUp, isDown, isLeft, isRight, isIn, isOut, isGridUp, isGridDown, isNoiseUp, isNoiseDown;
 
 var rows = 20;
 var cols = 20;
 var gridSize = 30;
-var gridSpacing = 10;
+var gridSpacing = 15;
 
 let chordIndex = 0;
 let octaveMultiplier = 1;
 let chordNoteIndex = 0;
-const scale = teoria.note("a").scale("major");
+const scale = teoria.note("a").scale("minor");
 
 const getChord = (i) => [
   scale.get(i).fq(),
@@ -108,8 +92,6 @@ const getChord = (i) => [
 ];
 
 const playVoice = (note, time) => {
-  // const voices = [synth, synth1, synth2];
-  // const prevIndex = voiceIndex;
   voices[voiceIndex].triggerRelease(note, time);
   voiceIndex++;
   voiceIndex = voiceIndex % voices.length;
@@ -128,8 +110,9 @@ Tone.Transport.scheduleRepeat((time) => {
 function setup() {
     createCanvas(innerWidth, innerHeight);
     background(255);
-
-    Tone.Transport.toggle();
+    
+    // TODO reenable for music o nstartup
+    // Tone.Transport.toggle();
 }
 
 function draw() {
@@ -150,42 +133,61 @@ function draw() {
     for (j = 0; j < rows; j++) {
         ox = 0
         for (i = 0; i < cols; i++) {
-            sx = (x + (gridSize * ((cols/2) - i)));
-            sy = (y + (gridSize * ((cols/2) - j)));
+            sx = (x + ((gridSize+gridSpacing) * ((cols/2) - i)));
+            sy = (y + ((gridSize+gridSpacing) * ((rows/2) - j)));
             sz = (z + (gridSize * (cols/2)));
             cx = sx + gridSize;
             cy = sy + gridSize;
             
             beginShape();
-                vertex(sx - limit(sz-sx, gridSize/4), sy + limit(sz+sy, gridSize));
-                vertex(sx - limit(sz-sx, gridSize/4), cy + limit(sz+cy, gridSize));
-                vertex(cx + limit(sz+cx, gridSize/4), cy - limit(sz-cy, gridSize));
-                vertex(cx + limit(sz+cx, gridSize/4), sy - limit(sz-sy, gridSize));
+                vertex(sx - limit((sz-sx)+(noise(sx, sy)*noiseMultiplier), gridSize/4), sy + limit(sz+sy, gridSize/4));
+                vertex(sx - limit((sz-sx)+(noise(sx, cy)*noiseMultiplier), gridSize/4), cy + limit(sz+cy, gridSize/4));
+                vertex(cx + limit((sz+cx)+(noise(cx, cy)*noiseMultiplier) , gridSize/4), cy - limit(sz-cy, gridSize/4));
+                vertex(cx + limit((sz+cx)+(noise(cx, sy)*noiseMultiplier), gridSize/4), sy - limit(sz-sy, gridSize/4));
             endShape(CLOSE);
 
-            ox += gridSpacing;
         }
-        oy += gridSpacing;
     }
     // --- 
 
     // this is where we work out what the interval should be
-    //interval = 3**x * 5**y * 7**z;
+    interval = 3**x * 5**y * 7**z;
+   
+    // too slow!
+    /*
+    while (interval < 1 || interval >=2) {
+        if (interval < 1) {
+            interval = interval * 2;
+        } else {
+            interval = interval / 2;
+        }
+    }
+    */
+    
+    // make it be in the range of 1 - 2
+    // This is less precice but not really a huge problem due to  
+    // fact it's just audio
+    // TODO make this be 1-2 instead of 0 -2 
+    let logInterval = log(interval) / log(2);
+    let logFrac = logInterval % 1; 
+    interval = pow(2, logFrac);
 
-    //while (interval < 1 || interval >=2) {
-    //    if (interval <1) {
-    //        interval = interval * 2;
-    //    } else {
-    //        interval = interval / 2;
-    //    }
-    //}
-
-    if (isUp) y--;
-    if (isDown) y++;
-    if (isLeft) x--;
-    if (isRight) x++;
-    if (isIn) z--;
-    if (isOut) z++;
+    if (isUp) y -= 0.1;
+    if (isDown) y += 0.1;
+    if (isLeft) x -= 0.1;
+    if (isRight) x += 0.1;
+    if (isIn) z -= 0.1;
+    if (isOut) z += 0.1 ;
+    if (isGridUp) gridSpacing += 0.1;
+    if (isGridDown) gridSpacing -= 0.1;
+    if (isNoiseUp) noiseMultiplier += 0.1;
+    if (isNoiseDown) noiseMultiplier -= 0.1;
+    
+    // TODO make this work better?
+    // if we're on mobile
+    x += accelerationX*0.1;
+    y += accelerationY*0.1;
+    z += accelerationZ*0.1;
 }
 
 function windowResized() {
