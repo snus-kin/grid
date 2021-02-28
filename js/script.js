@@ -21,6 +21,18 @@ function limit(value, amplitude) {
     return amplitude * sin((PI / amplitude) * value);
 }
 
+function approx_round(value, iters) {
+    let result = value;
+
+    var innerSum = -sin(2*PI*value);
+    for (f = 2; f <= iters; f++) { 
+        innerSum += sin((i * 2) * PI * value) / f
+    }
+
+    result += innerSum / PI;
+    return result;
+}
+
 function toggleTransport() {
   Tone.Transport.toggle();
   if (Tone.Transport.state === "stopped") {
@@ -76,8 +88,9 @@ var isUp, isDown, isLeft, isRight, isIn, isOut, isGridUp, isGridDown, isNoiseUp,
 
 var rows = 20;
 var cols = 20;
-var gridSize = 30;
-var gridSpacing = 15;
+var gridSize = 20;
+var gridSpacing = 20;
+var n = 4;
 
 let chordIndex = 0;
 let octaveMultiplier = 1;
@@ -127,42 +140,41 @@ function draw() {
     
     // draw the actual grid, here some offsets should be calculated by another
     // function or something?
-    var sx, sy, cx, cy;
-    var ox = 0;
-    var oy = 0;
+    var sx, sy, ox, oy;
     for (j = 0; j < rows; j++) {
-        ox = 0
         for (i = 0; i < cols; i++) {
             sx = (x + ((gridSize+gridSpacing) * ((cols/2) - i)));
             sy = (y + ((gridSize+gridSpacing) * ((rows/2) - j)));
             sz = (z + (gridSize * (cols/2)));
-            cx = sx + gridSize;
-            cy = sy + gridSize;
-            
-            beginShape();
-                vertex(sx - limit((sz-sx)+(noise(sx, sy)*noiseMultiplier), gridSize/4), sy + limit(sz+sy, gridSize/4));
-                vertex(sx - limit((sz-sx)+(noise(sx, cy)*noiseMultiplier), gridSize/4), cy + limit(sz+cy, gridSize/4));
-                vertex(cx + limit((sz+cx)+(noise(cx, cy)*noiseMultiplier) , gridSize/4), cy - limit(sz-cy, gridSize/4));
-                vertex(cx + limit((sz+cx)+(noise(cx, sy)*noiseMultiplier), gridSize/4), sy - limit(sz-sy, gridSize/4));
-            endShape(CLOSE);
 
+            //circle(sx, sy, gridSize*2);
+
+            let n = approx_round(map(noise(sx*0.0001, sy*0.0001, sz*0.0001), 0, 1, 1, 6), 20);
+
+            let theta = 3*QUARTER_PI;
+            dTheta = TWO_PI/n;
+
+            //ox = noise(sx + gridSize*cos(theta), sz)*10;
+            //oy = noise(sy + gridSize*sin(theta), sz)*10;
+            ox = 0;
+            oy = 0;
+
+            beginShape()
+                vertex((sx + ox) + gridSize*cos(theta), (sy + oy) + gridSize*sin(theta));
+                for (k = 1; k <= n; k++) {
+                    theta += dTheta;
+                    // calculate offset here
+                    //ox = noise(sx + gridSize*cos(theta), sz)*10;
+                    //oy = noise(sy + gridSize*sin(theta), sz)*10;
+                    vertex((sx + ox) + gridSize*cos(theta), (sy + oy) + gridSize*sin(theta));
+                }
+            endShape(CLOSE);
         }
     }
     // --- 
 
     // this is where we work out what the interval should be
     interval = 3**x * 5**y * 7**z;
-   
-    // too slow!
-    /*
-    while (interval < 1 || interval >=2) {
-        if (interval < 1) {
-            interval = interval * 2;
-        } else {
-            interval = interval / 2;
-        }
-    }
-    */
     
     // make it be in the range of 1 - 2
     // This is less precice but not really a huge problem due to  
@@ -172,12 +184,12 @@ function draw() {
     let logFrac = logInterval % 1; 
     interval = pow(2, logFrac);
 
-    if (isUp) y -= 0.1;
-    if (isDown) y += 0.1;
-    if (isLeft) x -= 0.1;
-    if (isRight) x += 0.1;
-    if (isIn) z -= 0.1;
-    if (isOut) z += 0.1 ;
+    if (isUp) y -= 1;
+    if (isDown) y += 1;
+    if (isLeft) x -= 1;
+    if (isRight) x += 1;
+    if (isIn) z -= 1;
+    if (isOut) z += 1;
     if (isGridUp) gridSpacing += 0.1;
     if (isGridDown) gridSpacing -= 0.1;
     if (isNoiseUp) noiseMultiplier += 0.1;
