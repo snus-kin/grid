@@ -78,6 +78,8 @@ const initialOscs = voices[0].getOscs();
  * + synth control
  * ===============
  */
+var logger;
+
 var x = 0;
 var y = 0;
 var z = 0;
@@ -124,6 +126,10 @@ function setup() {
     createCanvas(innerWidth, innerHeight);
     background(255);
     
+    let seed = random();
+    noiseSeed(seed);
+    logger = new Logger(seed, 0);
+    
     // TODO reenable for music o nstartup
     // Tone.Transport.toggle();
 }
@@ -147,25 +153,21 @@ function draw() {
             sy = (y + ((gridSize+gridSpacing) * ((rows/2) - j)));
             sz = (z + (gridSize * (cols/2)));
 
-            //circle(sx, sy, gridSize*2);
-
-            let n = approx_round(map(noise(sx*0.0001, sy*0.0001, sz*0.0001), 0, 1, 1, 6), 20);
+            let n = approx_round(map(noise(sx*0.001, sy*0.001, sz*0.001), 0, 1, 1, 6), 1);
 
             let theta = 3*QUARTER_PI;
             dTheta = TWO_PI/n;
 
-            //ox = noise(sx + gridSize*cos(theta), sz)*10;
-            //oy = noise(sy + gridSize*sin(theta), sz)*10;
-            ox = 0;
-            oy = 0;
+            ox = noise((sx + gridSize*cos(theta))*0.01, sz)*10;
+            oy = noise((sy + gridSize*sin(theta))*0.01, sz)*10;
 
             beginShape()
                 vertex((sx + ox) + gridSize*cos(theta), (sy + oy) + gridSize*sin(theta));
                 for (k = 1; k <= n; k++) {
                     theta += dTheta;
                     // calculate offset here
-                    //ox = noise(sx + gridSize*cos(theta), sz)*10;
-                    //oy = noise(sy + gridSize*sin(theta), sz)*10;
+                    ox = noise((sx + gridSize*cos(theta))*0.01, sz)*10;
+                    oy = noise((sy + gridSize*sin(theta))*0.01, sz)*10;
                     vertex((sx + ox) + gridSize*cos(theta), (sy + oy) + gridSize*sin(theta));
                 }
             endShape(CLOSE);
@@ -194,12 +196,9 @@ function draw() {
     if (isGridDown) gridSpacing -= 0.1;
     if (isNoiseUp) noiseMultiplier += 0.1;
     if (isNoiseDown) noiseMultiplier -= 0.1;
-    
-    // TODO make this work better?
-    // if we're on mobile
-    x += accelerationX*0.1;
-    y += accelerationY*0.1;
-    z += accelerationZ*0.1;
+
+    if (frameCount % 100 == 0)
+        logger.addElement(x,y,z,noiseMultiplier,gridSpacing);
 }
 
 function windowResized() {
