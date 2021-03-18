@@ -79,6 +79,7 @@ const initialOscs = voices[0].getOscs();
  * ===============
  */
 var logger;
+let slider, button, val;
 
 var x = 0;
 var y = 0;
@@ -126,9 +127,17 @@ function setup() {
     createCanvas(innerWidth, innerHeight);
     background(255);
     
-    let seed = random();
+    let seed = random(0, 1000);
     noiseSeed(seed);
     logger = new Logger(seed, 0);
+
+    slider = createSlider(0, 100, 0);
+    slider.position(0,0);
+    slider.style('width', '200px');
+
+    button = createButton('ok');
+    button.position(200, 0);
+    button.mousePressed(loadState);
     
     // TODO reenable for music o nstartup
     // Tone.Transport.toggle();
@@ -185,7 +194,8 @@ function draw() {
     let logInterval = log(interval) / log(2);
     let logFrac = logInterval % 1; 
     interval = pow(2, logFrac);
-
+    
+    // Controls for each parameter
     if (isUp) y -= 1;
     if (isDown) y += 1;
     if (isLeft) x -= 1;
@@ -197,8 +207,22 @@ function draw() {
     if (isNoiseUp) noiseMultiplier += 0.1;
     if (isNoiseDown) noiseMultiplier -= 0.1;
 
-    if (frameCount % 100 == 0)
+    if (frameCount % 100 == 0) {
         logger.addElement(x,y,z,noiseMultiplier,gridSpacing);
+    }
+
+    val = map(slider.value(), 0, 100, 0, logger.getIndex());
+}
+
+function loadState() {
+    let state = logger.getParameters(val);
+    x = state['x'];
+    y = state['y'];
+    z = state['z'];
+    gridSpacing = state['gridSpacing'];
+    noiseLevel = state['noiseLevel'];
+    
+    //logger.removeElement(round(val));
 }
 
 function windowResized() {
