@@ -42,6 +42,28 @@ function toggleTransport() {
   }
 }
 
+// Download the tree as a JSON object in a file
+function downloadJson() {
+    currentTree = logger.exportTree();
+    const blob = new Blob([JSON.stringify(currentTree)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = seed + '.json' || 'download';
+    a.click();
+    a.remove();
+}
+
+function loadState() {
+    let state = logger.getParameters(val,val,0);
+    x = state['x'];
+    y = state['y'];
+    z = state['z'];
+    gridSpacing = state['gridSpacing'];
+    noiseLevel = state['noiseLevel'];
+}
+
 /*
  * ============
  * Setup Synths
@@ -79,6 +101,7 @@ const initialOscs = voices[0].getOscs();
  * ===============
  */
 var logger;
+var currentTree, seed;
 let slider, button, val;
 
 var x = 0;
@@ -127,9 +150,12 @@ function setup() {
     createCanvas(innerWidth, innerHeight);
     background(255);
     
-    let seed = random(0, 1000);
+    seed = random(0, 1000);
     noiseSeed(seed);
-    logger = new Logger(seed, 0);
+    
+    // setup logging
+    initalState = {"x":x,"y":y,"z":z,"noiseMultiplier":noiseMultiplier,"gridSpacing":gridSpacing};
+    logger = new Logger(seed, initalState);
 
     slider = createSlider(0, 100, 0);
     slider.position(0,0);
@@ -138,7 +164,12 @@ function setup() {
     button = createButton('ok');
     button.position(200, 0);
     button.mousePressed(loadState);
+
+    button = createButton('download');
+    button.position(300, 0);
+    button.mousePressed(downloadJson);
     
+
     // TODO reenable for music o nstartup
     // Tone.Transport.toggle();
 }
@@ -209,21 +240,13 @@ function draw() {
 
     if (frameCount % 100 == 0) {
         logger.addElement(x,y,z,noiseMultiplier,gridSpacing);
+        // here we should also draw an extra tree 
+        let tree = logger.getLog();
     }
 
-    val = map(slider.value(), 0, 100, 0, logger.getIndex());
+    val = round(map(slider.value(), 0, 100, 0, logger.getIndex()));
 }
 
-function loadState() {
-    let state = logger.getParameters(val);
-    x = state['x'];
-    y = state['y'];
-    z = state['z'];
-    gridSpacing = state['gridSpacing'];
-    noiseLevel = state['noiseLevel'];
-    
-    //logger.removeElement(round(val));
-}
 
 function windowResized() {
     resizeCanvas(innerWidth, innerHeight);

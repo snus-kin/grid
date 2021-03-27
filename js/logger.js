@@ -1,59 +1,58 @@
 class Logger {
     logObj = {};
-    index = -1; // undefined to start with
+    tree = dataTree.create();
+    previousNode = null;
+    index = 0;
     seed = 0;
-    uuid = 0;
 
-    constructor(seed, uuid) {
+    constructor(seed, uuid, initialState) {
         this.seed = seed;
-        this.uuid = uuid;
-
-        this.logObj = {'seed': seed, 'uuid': uuid, 'elements': []};
+        
+        // object = {'seed': seed, 'uuid': uuid}
+        this.previousNode = this.tree.insert({'key': this.index, value: initialState});
     }
 
     // Add element
-    addElement(x,y,z,noiseLevel,gridSpacing) {
-        let potentialElement = {'x': x, 'y': y, 'z': z, 'noiseLevel': noiseLevel, 'gridSpacing': gridSpacing};
+    addElement(x, y, z, noiseLevel, gridSpacing) {
+        let potentialElement = {'key': this.index, value: {'x': x, 'y': y, 'z': z,
+            'noiseLevel': noiseLevel, 'gridSpacing': gridSpacing}};
         
-        // bit of a funny equality comparison but works for this
-        // maybe in old browsers it doesn't work, TODO look @ changing this
-        if (JSON.stringify(this.logObj.elements[this.index]) != JSON.stringify(potentialElement)) {
-            this.index++;
-            this.logObj.elements[this.index] = potentialElement;
+        if (JSON.stringify(this.previousNode.data()["value"]) != JSON.stringify(potentialElement["value"])) {
+            this.previousNode = this.tree.insertToNode(this.previousNode, potentialElement);
+            this.index ++;
         }
     }
-
-    // Remove element(s) ?
-    removeElement(index) {
-        // remove all elements after index ?
-        let removed = this.logObj.elements.splice(index);
-        return removed;
-    }
     
-    // Remove upstream and set to current index
-    setIndex(index) {
-        this.index = index;
-        this.removeElement(index+1);
+    // Used to travel upstream
+    setNode(index) {
+        this.previousNode = this.tree.traverser().searchBFS(function(data) {
+            return data.key === index;
+        });
     }
 
-    // Get current index
-    getIndex() {
-        return this.index;
-    }
+    // Recall between two indicies
+    getParameters(floor, ceil, t) {
+        // floor is the lower index, ceil is the higher, t should be a number
+        // from 0 - 1 that shows where you are between them 
+        //
+        // if ceil = floor + 1 maybe we can make this faster too
+        if (ceil % 1 == 0) {
+            var ceilNode = this.tree.traverser().searchBFS(function(data) {
+                return data.key == ceil;
+            });
 
-    // Recall at index <x>
-    getParameters(index) {
-        if (index % 1 == 0) {
-            return this.logObj.elements[index];
+            this.previousNode = ceilNode;
+
+            return ceilNode.data()["value"];
         } else {
             // if index between two numbers interpolate
-            let ceil = Math.ceil(index);
-            let floor = Math.floor(index);
-
-            let ceilParams = this.logObj.elements[ceil];
-            let floorParams = this.logObj.elements[floor];
-
-            let t = index - floor;
+            var ceilParams = this.tree.traverser().searchBFS(function(data) {
+                return data.key == ceil;
+            }).value;
+            
+            var floorParams = this.tree.traverser().searchBFS(function(data) {
+                return data.key == ceil;
+            }).value;
             
             var state = {}
             
@@ -61,19 +60,41 @@ class Logger {
             // interpolation between the two 
             for (var key in ceilParams) {
                 state[key] = lerp(ceilParams[key], floorParams[key], t);
-            }
+            } 
 
             return state;
         }
     }
+
+    // Get current index
+    getIndex() {
+        return this.index;
+    }
     
-    // Return the whole log object
+    // Return the whole tree
     getLog() {
-        return this.logObj;
+        return this.tree;
     }
     
-    // Set a cookie in the browser so that we can recall later
-    setCookie() {
-        document.cookie = this.uuid + ";" + this.logObj + ";path=/";
+    // Export the tree structure as a JSON object
+    exportTree() {
+        return this.tree.export(function(data){ 
+            return {key: data.key, value: data.value}
+        });
     }
+    
+    // Import the tree as a JSON object
+    importTree(treeJson) {
+        this.tree.import(treeJson, 'children', function(nodeData) {
+            return {
+                    key: nodeData.key,
+                    value: nodeData.value
+            }
+        });
+    }
+
+    // TODO // Set a cookie in the browser so that we can recall later
+    // TODO setCookie() {
+    // TODO     document.cookie = this.uuid + ";" + this.exportTree() + ";path=/";
+    // TODO }
 }
