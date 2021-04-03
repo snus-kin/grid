@@ -44,15 +44,7 @@ function toggleTransport() {
 
 // Download the tree as a JSON object in a file
 function downloadJson() {
-    currentTree = logger.exportTree();
-    const blob = new Blob([JSON.stringify(currentTree)], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = seed + '.json' || 'download';
-    a.click();
-    a.remove();
+    logger.downloadTree(seed);
 }
 
 function loadState() {
@@ -61,7 +53,7 @@ function loadState() {
     y = state['y'];
     z = state['z'];
     gridSpacing = state['gridSpacing'];
-    noiseLevel = state['noiseLevel'];
+    noiseMultiplier = state['noiseMultiplier'];
 }
 
 /*
@@ -76,15 +68,17 @@ const NUM_OSCS = 4;
 const hpFilter = new Tone.Filter({ frequency: 5, type: "highpass" });
 const lpFilter = new Tone.Filter(20000, "lowpass");
 const cheby = new Tone.Chebyshev({ order: 2, wet: 0 });
+const reverb = new Tone.Reverb({"wet": 1, "decay": 1.5});
+const pingpong = new Tone.PingPongDelay("8n", 0.8);
 const limiter = new Tone.Limiter();
 const fft = new Tone.FFT();
 
-const ACTIVE_EFFECTS = [cheby, hpFilter, lpFilter];
+const ACTIVE_EFFECTS = [cheby, hpFilter, lpFilter, reverb, pingpong];
 const DESTINATION_OUTPUT = new Tone.Gain(destinationGain).fan(
     Tone.Destination,
     fft
 );
-const FX_BUS = new Tone.Gain(0.2).chain(...ACTIVE_EFFECTS, DESTINATION_OUTPUT);
+const FX_BUS = new Tone.Gain(0.1).chain(...ACTIVE_EFFECTS, DESTINATION_OUTPUT);
 
 // base synth
 const synthb = new AdditiveSynth();
@@ -102,15 +96,16 @@ const initialOscs = voices[0].getOscs();
  */
 var logger;
 var currentTree, seed;
+var tree;
 let slider, button, val;
+var interval, n;
+var isUp, isDown, isLeft, isRight, isIn, isOut, isGridUp, isGridDown,
+    isNoiseUp, isNoiseDown;
 
 var x = 0;
 var y = 0;
 var z = 0;
 var noiseMultiplier = 0;
-var interval;
-
-var isUp, isDown, isLeft, isRight, isIn, isOut, isGridUp, isGridDown, isNoiseUp, isNoiseDown;
 
 var rows = 20;
 var cols = 20;
@@ -119,15 +114,48 @@ var gridSpacing = 20;
 var n = 4;
 
 let chordIndex = 0;
-let octaveMultiplier = 1;
-let chordNoteIndex = 0;
-const scale = teoria.note("a").scale("minor");
+let octaveMultiplier = 0.125;
+const base = 440;
+var currentNote = 1;
+
+function pickNextNote(base) {
+    // Make a matrix, each elment of which corresponds to an interval, each row
+    // corresponds to a probability
+    const markovObject = {
+                            1:    [0.1, 0.2, 0.5, 0.1, 0.1],
+                            1.2:  [0.2, 0.1, 0.5, 0.2, 0.2],
+                            1.25: [0.3, 0.2, 0  , 0.5, 0.1],
+                            1.5:  [0.3, 0.2, 0.4, 0.1, 0  ],
+                            1.6:  [0.2, 0.2, 0.2, 0.3, 0.1]
+                        };
+
+    const intervalList = Object.keys(markovObject);
+    const picked = random()
+    const probList = markovObject[currentNote];
+    
+    let intervalIndex = -1;
+    let acc = 0;
+    
+    // accumulate until we reach the number picked by random, then select that
+    // number, i.e. if random is 0.3 and the list is [0.1, 0.2, 0.2, 0.2, 0.3]
+    // then intervalIndex will be 1
+    probList.forEach((e, i) => {
+        if (picked >= acc && picked < acc + e) {
+            intervalIndex = i;
+        }
+        acc += e;
+    });
+
+    return intervalList[intervalIndex];
+}
 
 const getChord = (i) => [
-  scale.get(i).fq(),
-  scale.get(i + 2).fq(),
-  scale.get(i + 4).fq(),
-  scale.get(i + 6).fq(),
+    base*currentNote*interval,
+    base*currentNote*interval*1.2,
+    base*currentNote*interval*1.5,
+    base*currentNote*interval*1.8,
+    base*currentNote*interval*2,
+    base*currentNote*interval*1.125
 ];
 
 const playVoice = (note, time) => {
@@ -137,14 +165,15 @@ const playVoice = (note, time) => {
   voices[voiceIndex].triggerAttack(note, time);
 };
 
+Tone.Transport.bpm.value = 80;
+
 Tone.Transport.scheduleRepeat((time) => {
-  const chord = getChord(chordIndex);
-
-  playVoice(chord[chordNoteIndex] * octaveMultiplier, time);
-
-  chordNoteIndex++;
-  chordNoteIndex = chordNoteIndex % chord.length;
-}, "4n");
+    const chord = getChord(chordIndex);
+    for(i = 0; i < round(n); i++) {
+        playVoice(chord[i] * octaveMultiplier, time);
+    }
+    currentNote = pickNextNote(base);
+}, "1n");
 
 function setup() {
     createCanvas(innerWidth, innerHeight);
@@ -168,10 +197,11 @@ function setup() {
     button = createButton('download');
     button.position(300, 0);
     button.mousePressed(downloadJson);
-    
+
+    tree = logger.getLog();
 
     // TODO reenable for music o nstartup
-    // Tone.Transport.toggle();
+    Tone.Transport.toggle();
 }
 
 function draw() {
@@ -179,9 +209,10 @@ function draw() {
 
     // grid
     // ---
+    push();
     strokeWeight(2);
     stroke(0);
-
+    
     translate((innerWidth/2) + (0-x), (innerHeight/2) + (0-y));
     
     // draw the actual grid, here some offsets should be calculated by another
@@ -193,38 +224,44 @@ function draw() {
             sy = (y + ((gridSize+gridSpacing) * ((rows/2) - j)));
             sz = (z + (gridSize * (cols/2)));
 
-            let n = approx_round(map(noise(sx*0.001, sy*0.001, sz*0.001), 0, 1, 1, 6), 1);
+            n = approx_round(map(noise(sx*0.001, sy*0.001, sz*0.001), 0, 1, 1, 6), 1);
 
-            let theta = 3*QUARTER_PI;
+            let theta = (3*QUARTER_PI) - TWO_PI/n;
             dTheta = TWO_PI/n;
 
-            ox = noise((sx + gridSize*cos(theta))*0.01, sz)*10;
-            oy = noise((sy + gridSize*sin(theta))*0.01, sz)*10;
-
             beginShape()
-                vertex((sx + ox) + gridSize*cos(theta), (sy + oy) + gridSize*sin(theta));
-                for (k = 1; k <= n; k++) {
+                for (k = 0; k <= n; k++) {
                     theta += dTheta;
-                    // calculate offset here
-                    ox = noise((sx + gridSize*cos(theta))*0.01, sz)*10;
-                    oy = noise((sy + gridSize*sin(theta))*0.01, sz)*10;
-                    vertex((sx + ox) + gridSize*cos(theta), (sy + oy) + gridSize*sin(theta));
+                    xc = sx + gridSize * cos(theta);
+                    yc = sy + gridSize * sin(theta);
+
+                    ox = noise((xc)*0.01, sz*0.01)*noiseMultiplier;
+                    oy = noise((yc)*0.01, sz*0.01)*noiseMultiplier;
+
+                    vertex((xc) + ox, (yc) + oy);
                 }
             endShape(CLOSE);
         }
     }
+    pop();
     // --- 
 
     // this is where we work out what the interval should be
-    interval = 3**x * 5**y * 7**z;
+    interval = pow(3,x*0.0001) * pow(5,y*0.0001) * pow(7,z*0.0001);
     
     // make it be in the range of 1 - 2
     // This is less precice but not really a huge problem due to  
     // fact it's just audio
     // TODO make this be 1-2 instead of 0 -2 
-    let logInterval = log(interval) / log(2);
-    let logFrac = logInterval % 1; 
-    interval = pow(2, logFrac);
+    while (1 >= interval || interval > 2) {
+        if ( 1 >= interval ) {
+            interval *= 2;
+        } else {
+            interval /= 2;
+        }
+    }
+    // let logInterval = round(log(interval) / log(2));
+    // interval = abs(interval / pow(2, logInterval));
     
     // Controls for each parameter
     if (isUp) y -= 1;
@@ -241,10 +278,45 @@ function draw() {
     if (frameCount % 100 == 0) {
         logger.addElement(x,y,z,noiseMultiplier,gridSpacing);
         // here we should also draw an extra tree 
-        let tree = logger.getLog();
+        tree = logger.getLog();
     }
+    
+    push();
+    var a = 100, b = 100;
+    var prevDepth = 0;
+    strokeWeight(5);
+    tree.traverser().traverseDFS(function(node) {
+        if (prevDepth + 1 == node['_depth']) {
+            b += 6;
+            prevDepth = node['_depth'];
+        } else {
+            b = 100 + (6 * node['_depth']);
+            a += 10;
+            prevDepth = node['_depth'];
+            push();
+            strokeWeight(1);
+            // TODO this line needs to be better considered
+            // There's a 'findcommonparent' function
+            // or node.parentNode()
+            // DFS tells us parent will always be to the left
+            let parentNode = node.parentNode();
+            line(100, b, a, b);
+            pop();
+        }
+        
 
-    val = round(map(slider.value(), 0, 100, 0, logger.getIndex()));
+        if (node.data()['key'] === logger.getIndex()-1 ) {
+            stroke(255, 0, 0);
+        } else if ( node.data()['key'] === val ) {
+            stroke(255, 0, 255);
+        }
+
+        point(a, b);
+        stroke(0);
+    });
+    pop();
+
+    val = floor(map(slider.value(), 0, 100, 0, logger.getIndex()-1));
 }
 
 

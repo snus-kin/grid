@@ -14,7 +14,7 @@ function AdditiveSynth() {
         
         // ADSR
         const env = new Tone.AmplitudeEnvelope({
-            attack:0.2,
+            attack:1,
             decay: 2,
             sustain: 1,
             release: 0.3

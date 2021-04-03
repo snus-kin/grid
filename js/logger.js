@@ -13,9 +13,9 @@ class Logger {
     }
 
     // Add element
-    addElement(x, y, z, noiseLevel, gridSpacing) {
+    addElement(x, y, z, noiseMultiplier, gridSpacing) {
         let potentialElement = {'key': this.index, value: {'x': x, 'y': y, 'z': z,
-            'noiseLevel': noiseLevel, 'gridSpacing': gridSpacing}};
+            'noiseMultiplier': noiseMultiplier, 'gridSpacing': gridSpacing}};
         
         if (JSON.stringify(this.previousNode.data()["value"]) != JSON.stringify(potentialElement["value"])) {
             this.previousNode = this.tree.insertToNode(this.previousNode, potentialElement);
@@ -91,6 +91,18 @@ class Logger {
                     value: nodeData.value
             }
         });
+    }
+    
+    downloadTree(seed) {
+        currentTree = this.exportTree();
+        const blob = new Blob([JSON.stringify(currentTree)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = seed + '.json' || 'download';
+        a.click();
+        a.remove();
     }
 
     // TODO // Set a cookie in the browser so that we can recall later
