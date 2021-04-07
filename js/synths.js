@@ -9,12 +9,12 @@ function AdditiveSynth() {
         const omniOsc = new Tone.OmniOscillator({
             type: "sine",
             phase: (i / NUM_OSCS) * 360,
-            volume: 0 - i *2,
+            volume: 0 - 2*i,
         });
         
         // ADSR
         const env = new Tone.AmplitudeEnvelope({
-            attack:1,
+            attack: 1,
             decay: 2,
             sustain: 1,
             release: 0.3
@@ -22,13 +22,7 @@ function AdditiveSynth() {
 
         omniOsc.chain(env);
 
-        const loop = new Tone.Loop((time) => {
-            env.triggerAttack(time);
-        });
-
-        const isLooping = true;
-
-        return {harmonic: i + 1, omniOsc, env, loop, isLooping };
+        return {harmonic: i + 1, omniOsc, env};
     });
 
     this.synths[0].env.connect(this.output);
@@ -42,53 +36,15 @@ function AdditiveSynth() {
     return {
         getOscs,
 
-        setOscType: (oscIndex, type) => {
-            this.synths[oscIndex].omniOsc.set({ type });
-        },
-
-        setLoop: (osc, interval) => {
-            console.log(interval);
-            if (interval === "off") {
-                this.synths[oscIndex].isLooping = false;
-                this.synths[oscIndex].loop.cancel();
-            } else {
-                this.synths[oscIndex].loop.set({ interval });
-                this.synths[oscIndex].isLooping = true;
-            }
-        },
-
-        setHarmonic: (oscIndex, harmonic) => {
-            this.synths[oscIndex].harmonic = harmonic;
-        },
-
-        setVolume: (oscIndex, volume) => {
-            this.synths[oscIndex].omniOsc.volume.value =
-                volume === -24 ? -Infinity : volume;
-        },
-
-        setDetune: (oscIndex, detune) => {
-            this.synths[oscIndex].omniOsc.set({ detune });
-        },
-
-        setEnvValue: (oscIndex, param, val) => {
-            this.synths[oscIndex].env[param] = val;
-        },
-
         triggerAttack: (note, time) => {
-            getOscs().forEach(({ omniOsc, env, harmonic, loop, isLooping }, i) => {
-                const fq = note * (harmonic === 0 ? 0.5 : harmonic);
+            getOscs().forEach(({harmonic, omniOsc, env}, i) => {
+                const fq = note * harmonic;
                 omniOsc.frequency.value = fq;
                 if (omniOsc.state === "stopped") {
                     omniOsc.start(time);
                 }
 
-                if (isLooping) {
-                    loop.cancel();
-                    loop.start();
-                } else {
-                    loop.cancel();
-                    env.triggerAttack(time);
-                }
+                env.triggerAttack(time);
             });
         },
 

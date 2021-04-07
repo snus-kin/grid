@@ -36,7 +36,10 @@ function approx_round(value, iters) {
 function toggleTransport() {
   Tone.Transport.toggle();
   if (Tone.Transport.state === "stopped") {
-    voices.forEach((synth) => {
+    mvoices.forEach((synth) => {
+      synth.triggerRelease();
+    });
+    bvoices.forEach((synth) => {
       synth.triggerRelease();
     });
   }
@@ -61,32 +64,30 @@ function loadState() {
  * Setup Synths
  * ============
  */
-let destinationGain = 0.3;
+let destinationGain = 0.5;
 let voiceIndex = 0;
 const NUM_OSCS = 4;
 
+// let's not damage the speakers
 const hpFilter = new Tone.Filter({ frequency: 5, type: "highpass" });
 const lpFilter = new Tone.Filter(20000, "lowpass");
-const cheby = new Tone.Chebyshev({ order: 2, wet: 0 });
+
+// fun audio effects
 const reverb = new Tone.Reverb({"wet": 1, "decay": 1.5});
 const pingpong = new Tone.PingPongDelay("8n", 0.8);
-const limiter = new Tone.Limiter();
-const fft = new Tone.FFT();
 
-const ACTIVE_EFFECTS = [cheby, hpFilter, lpFilter, reverb, pingpong];
+const ACTIVE_EFFECTS = [hpFilter, lpFilter, reverb, pingpong];
 const DESTINATION_OUTPUT = new Tone.Gain(destinationGain).fan(
     Tone.Destination,
-    fft
 );
+
+// chain all of effects (... spreads) to the output 
 const FX_BUS = new Tone.Gain(0.1).chain(...ACTIVE_EFFECTS, DESTINATION_OUTPUT);
 
-// base synth
-const synthb = new AdditiveSynth();
-// this is the one that will be detuned as per our x,y 
-const synthm = new AdditiveSynth();
-const voices = [synthb, synthm];
-
-const initialOscs = voices[0].getOscs();
+// base frequency
+const bvoices = new Array(6).fill(new AdditiveSynth());
+// moving frequency as per the x, y, z control scheme
+const mvoices = new Array(6).fill(new AdditiveSynth());
 
 /* 
  * ===============
@@ -118,15 +119,16 @@ let octaveMultiplier = 0.125;
 const base = 440;
 var currentNote = 1;
 
-function pickNextNote(base) {
+function pickNextNote() {
     // Make a matrix, each elment of which corresponds to an interval, each row
     // corresponds to a probability
     const markovObject = {
-                            1:    [0.1, 0.2, 0.5, 0.1, 0.1],
-                            1.2:  [0.2, 0.1, 0.5, 0.2, 0.2],
-                            1.25: [0.3, 0.2, 0  , 0.5, 0.1],
-                            1.5:  [0.3, 0.2, 0.4, 0.1, 0  ],
-                            1.6:  [0.2, 0.2, 0.2, 0.3, 0.1]
+                            1:    [0  , 0.2, 0.5, 0.1, 0.1, 0.1],
+                            1.2:  [0.1, 0  , 0.4, 0.1, 0.2, 0.2],
+                            1.25: [0.3, 0  , 0.1, 0.4, 0.1, 0.1],
+                            1.5:  [0.3, 0.2, 0.2, 0  , 0.1, 0.2],
+                            1.6:  [0.2, 0.2, 0.2, 0.3, 0  , 0.1],
+                            2:    [0.4, 0.1, 0.2, 0.2, 0.1, 0  ]
                         };
 
     const intervalList = Object.keys(markovObject);
@@ -150,29 +152,32 @@ function pickNextNote(base) {
 }
 
 const getChord = (i) => [
-    base*currentNote*interval,
-    base*currentNote*interval*1.2,
-    base*currentNote*interval*1.5,
-    base*currentNote*interval*1.8,
-    base*currentNote*interval*2,
-    base*currentNote*interval*1.125
+    base*currentNote,
+    base*currentNote*1.2,
+    base*currentNote*1.5,
+    base*currentNote*1.8,
+    base*currentNote*2,
+    base*currentNote*1.125
 ];
 
 const playVoice = (note, time) => {
-  voices[voiceIndex].triggerRelease(note, time);
-  voiceIndex++;
-  voiceIndex = voiceIndex % voices.length;
-  voices[voiceIndex].triggerAttack(note, time);
+    voiceIndex++;
+    voiceIndex = voiceIndex % bvoices.length;
+    bvoices[voiceIndex].triggerRelease(time);
+    mvoices[voiceIndex].triggerRelease(time);
+    bvoices[voiceIndex].triggerAttack(note, time);
+    mvoices[voiceIndex].triggerAttack(note*interval, time);
 };
 
 Tone.Transport.bpm.value = 80;
 
 Tone.Transport.scheduleRepeat((time) => {
     const chord = getChord(chordIndex);
-    for(i = 0; i < round(n); i++) {
+    let notes = round(map(noise(x*0.001, y*0.001, z*0.001), 0, 1, 1, 6));
+    for(i = 0; i < notes; i++) {
         playVoice(chord[i] * octaveMultiplier, time);
     }
-    currentNote = pickNextNote(base);
+    currentNote = pickNextNote();
 }, "1n");
 
 function setup() {
