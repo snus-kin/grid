@@ -5,19 +5,19 @@ class Logger {
     index = 0;
     seed = 0;
 
-    constructor(seed, uuid, initialState) {
+    constructor(seed, initialState) {
         this.seed = seed;
         
-        // object = {'seed': seed, 'uuid': uuid}
         this.previousNode = this.tree.insert({'key': this.index, value: initialState});
     }
 
     // Add element
     addElement(x, y, z, noiseMultiplier, gridSpacing) {
-        let potentialElement = {'key': this.index, value: {'x': x, 'y': y, 'z': z,
+        let potentialElement = {'key': this.index+1, value: {'x': x, 'y': y, 'z': z,
             'noiseMultiplier': noiseMultiplier, 'gridSpacing': gridSpacing}};
         
-        if (JSON.stringify(this.previousNode.data()["value"]) != JSON.stringify(potentialElement["value"])) {
+        if (JSON.stringify(this.previousNode.data()["value"]) !=
+                    JSON.stringify(potentialElement["value"])) {
             this.previousNode = this.tree.insertToNode(this.previousNode, potentialElement);
             this.index ++;
         }
@@ -85,12 +85,14 @@ class Logger {
     
     // Import the tree as a JSON object
     importTree(treeJson) {
+        this.index = 0;
         this.tree.import(treeJson, 'children', function(nodeData) {
+            this.index++
             return {
                     key: nodeData.key,
                     value: nodeData.value
             }
-        });
+        }.bind(this));
     }
     
     downloadTree(seed) {
@@ -104,9 +106,4 @@ class Logger {
         a.click();
         a.remove();
     }
-
-    // TODO // Set a cookie in the browser so that we can recall later
-    // TODO setCookie() {
-    // TODO     document.cookie = this.uuid + ";" + this.exportTree() + ";path=/";
-    // TODO }
 }

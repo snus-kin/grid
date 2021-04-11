@@ -1,7 +1,7 @@
 /* 
- * =======
- * Utility
- * =======
+ * =================
+ * Utility Functions
+ * =================
  */
 function setMove(k, b) {
     if (k == 'w') { isUp = b };
@@ -34,15 +34,16 @@ function approx_round(value, iters) {
 }
 
 function toggleTransport() {
-  Tone.Transport.toggle();
-  if (Tone.Transport.state === "stopped") {
-    mvoices.forEach((synth) => {
-      synth.triggerRelease();
-    });
-    bvoices.forEach((synth) => {
-      synth.triggerRelease();
-    });
-  }
+    // Turn off the voices
+    Tone.Transport.toggle();
+    if (Tone.Transport.state === "stopped") {
+        mvoices.forEach((synth) => {
+            synth.triggerRelease();
+        });
+        bvoices.forEach((synth) => {
+            synth.triggerRelease();
+        });
+    }
 }
 
 // Download the tree as a JSON object in a file
@@ -50,13 +51,63 @@ function downloadJson() {
     logger.downloadTree(seed);
 }
 
+function uploadJson(file) {
+    // first: let the user select the tree
+    // second: import the tree
+    // third: set state to final value in tree
+    if (file.type === "application") {
+        logger.importTree(file.data);
+        noiseSeed(file.name.substring(0, file.name.length - 5));
+        
+        let state = logger.getParameters(0,0,0);
+        x = state['x'];
+        y = state['y'];
+        z = state['z'];
+        gridSpacing = state['gridSpacing'];
+        noiseMultiplier = state['noiseMultiplier'];
+    }
+}
+
 function loadState() {
+    // load a state from the parameters, callback function for pressing 'ok'
     let state = logger.getParameters(val,val,0);
     x = state['x'];
     y = state['y'];
     z = state['z'];
     gridSpacing = state['gridSpacing'];
     noiseMultiplier = state['noiseMultiplier'];
+}
+
+function pickNextNote() {
+    // Make a matrix, each elment of which corresponds to an interval, each row
+    // corresponds to a probability
+    const markovObject = {
+                            1:    [0  , 0.2, 0.5, 0.1, 0.1, 0.1],
+                            1.2:  [0.1, 0  , 0.4, 0.1, 0.2, 0.2],
+                            1.25: [0.3, 0  , 0.1, 0.4, 0.1, 0.1],
+                            1.5:  [0.3, 0.2, 0.2, 0  , 0.1, 0.2],
+                            1.6:  [0.2, 0.2, 0.2, 0.3, 0  , 0.1],
+                            2:    [0.4, 0.1, 0.2, 0.2, 0.1, 0  ]
+                        };
+
+    const intervalList = Object.keys(markovObject);
+    const picked = random()
+    const probList = markovObject[currentNote];
+    
+    let intervalIndex = -1;
+    let acc = 0;
+    
+    // accumulate until we reach the number picked by random, then select that
+    // number, i.e. if random is 0.3 and the list is [0.1, 0.2, 0.2, 0.2, 0.3]
+    // then intervalIndex will be 1
+    probList.forEach((e, i) => {
+        if (picked >= acc && picked < acc + e) {
+            intervalIndex = i;
+        }
+        acc += e;
+    });
+
+    return intervalList[intervalIndex];
 }
 
 /*
@@ -95,6 +146,7 @@ const mvoices = new Array(6).fill(new AdditiveSynth());
  * + synth control
  * ===============
  */
+// Set up variables for grid
 var logger;
 var currentTree, seed;
 var tree;
@@ -114,42 +166,12 @@ var gridSize = 20;
 var gridSpacing = 20;
 var n = 4;
 
+// Synth Control
+// ---
 let chordIndex = 0;
 let octaveMultiplier = 0.125;
 const base = 440;
 var currentNote = 1;
-
-function pickNextNote() {
-    // Make a matrix, each elment of which corresponds to an interval, each row
-    // corresponds to a probability
-    const markovObject = {
-                            1:    [0  , 0.2, 0.5, 0.1, 0.1, 0.1],
-                            1.2:  [0.1, 0  , 0.4, 0.1, 0.2, 0.2],
-                            1.25: [0.3, 0  , 0.1, 0.4, 0.1, 0.1],
-                            1.5:  [0.3, 0.2, 0.2, 0  , 0.1, 0.2],
-                            1.6:  [0.2, 0.2, 0.2, 0.3, 0  , 0.1],
-                            2:    [0.4, 0.1, 0.2, 0.2, 0.1, 0  ]
-                        };
-
-    const intervalList = Object.keys(markovObject);
-    const picked = random()
-    const probList = markovObject[currentNote];
-    
-    let intervalIndex = -1;
-    let acc = 0;
-    
-    // accumulate until we reach the number picked by random, then select that
-    // number, i.e. if random is 0.3 and the list is [0.1, 0.2, 0.2, 0.2, 0.3]
-    // then intervalIndex will be 1
-    probList.forEach((e, i) => {
-        if (picked >= acc && picked < acc + e) {
-            intervalIndex = i;
-        }
-        acc += e;
-    });
-
-    return intervalList[intervalIndex];
-}
 
 const getChord = (i) => [
     base*currentNote,
@@ -172,14 +194,15 @@ const playVoice = (note, time) => {
 Tone.Transport.bpm.value = 80;
 
 Tone.Transport.scheduleRepeat((time) => {
+    currentNote = pickNextNote();
     const chord = getChord(chordIndex);
     let notes = round(map(noise(x*0.001, y*0.001, z*0.001), 0, 1, 1, 6));
     for(i = 0; i < notes; i++) {
         playVoice(chord[i] * octaveMultiplier, time);
     }
-    currentNote = pickNextNote();
 }, "1n");
 
+// Begin p5js code
 function setup() {
     createCanvas(innerWidth, innerHeight);
     background(255);
@@ -188,20 +211,23 @@ function setup() {
     noiseSeed(seed);
     
     // setup logging
-    initalState = {"x":x,"y":y,"z":z,"noiseMultiplier":noiseMultiplier,"gridSpacing":gridSpacing};
+    const initalState = {"x":x,"y":y,"z":z,"noiseMultiplier":noiseMultiplier,"gridSpacing":gridSpacing};
     logger = new Logger(seed, initalState);
 
     slider = createSlider(0, 100, 0);
     slider.position(0,0);
     slider.style('width', '200px');
 
-    button = createButton('ok');
-    button.position(200, 0);
-    button.mousePressed(loadState);
+    ok = createButton('ok');
+    ok.position(200, 0);
+    ok.mousePressed(loadState);
 
-    button = createButton('download');
-    button.position(300, 0);
-    button.mousePressed(downloadJson);
+    download = createButton('download');
+    download.position(300, 0);
+    download.mousePressed(downloadJson);
+
+    upload = createFileInput(uploadJson);
+    upload.position(500, 0);
 
     tree = logger.getLog();
 
@@ -210,7 +236,9 @@ function setup() {
 }
 
 function draw() {
+    // blank the screen every frame
     background(255);
+
 
     // grid
     // ---
@@ -220,11 +248,10 @@ function draw() {
     
     translate((innerWidth/2) + (0-x), (innerHeight/2) + (0-y));
     
-    // draw the actual grid, here some offsets should be calculated by another
-    // function or something?
     var sx, sy, ox, oy;
     for (j = 0; j < rows; j++) {
         for (i = 0; i < cols; i++) {
+            // calculate x y and z values for the current polygon
             sx = (x + ((gridSize+gridSpacing) * ((cols/2) - i)));
             sy = (y + ((gridSize+gridSpacing) * ((rows/2) - j)));
             sz = (z + (gridSize * (cols/2)));
@@ -237,27 +264,30 @@ function draw() {
             beginShape()
                 for (k = 0; k <= n; k++) {
                     theta += dTheta;
-                    xc = sx + gridSize * cos(theta);
-                    yc = sy + gridSize * sin(theta);
+                    ox = limit(noise(sx*cos(theta)*0.001, sz*0.001)*noiseMultiplier, 2*gridSize);
+                    oy = limit(noise(sy*sin(theta)*0.001, sz*0.001)*noiseMultiplier, 2*gridSize);
 
-                    ox = noise((xc)*0.01, sz*0.01)*noiseMultiplier;
-                    oy = noise((yc)*0.01, sz*0.01)*noiseMultiplier;
+                    // Points on the circle
+                    xc = sx + ox + gridSize * cos(theta);
+                    yc = sy + oy + gridSize * sin(theta);
 
-                    vertex((xc) + ox, (yc) + oy);
+                    vertex(xc, yc);
                 }
             endShape(CLOSE);
         }
     }
     pop();
     // --- 
-
-    // this is where we work out what the interval should be
-    interval = pow(3,x*0.0001) * pow(5,y*0.0001) * pow(7,z*0.0001);
     
-    // make it be in the range of 1 - 2
-    // This is less precice but not really a huge problem due to  
-    // fact it's just audio
-    // TODO make this be 1-2 instead of 0 -2 
+    // interval
+    // ---
+    // this is where we work out what the interval should be
+    // make these values smaller (as is the noise) to get ingeger ratios only
+    // sometimes
+    interval = pow(3,x*0.0001) * pow(5,y*0.0001) * pow(7,z*0.0001) *
+               pow(11,noiseMultiplier*0.001) * pow(13,gridSpacing*0.001); 
+    
+    // get the interval in the right range
     while (1 >= interval || interval > 2) {
         if ( 1 >= interval ) {
             interval *= 2;
@@ -265,10 +295,63 @@ function draw() {
             interval /= 2;
         }
     }
-    // let logInterval = round(log(interval) / log(2));
-    // interval = abs(interval / pow(2, logInterval));
+    // ---
     
-    // Controls for each parameter
+    // history tree
+    // ---
+    if (frameCount % 100 == 0) {
+        logger.addElement(x,y,z,noiseMultiplier,gridSpacing);
+        tree = logger.getLog();
+    }
+
+    // get the value of the slider 
+    val = ceil(map(slider.value(), 0, 100, 0, logger.getIndex()));
+   
+    // Draw the history tree
+    push();
+    var a = 100, b = 100;
+    var prevDepth = 0;
+    var parentNode;
+    var aValues = {};
+    strokeWeight(5);
+    tree.traverser().traverseDFS(function(node) {
+        if (prevDepth + 1 == node['_depth']) {
+            b += 6;
+            aValues[node.data()["key"]] = a;
+            prevDepth = node['_depth'];
+        } else {
+            // get the parent node only when we branch
+            parentNode = node.parentNode();
+            
+            b = 100 + (6 * node['_depth']);
+            a += 10;
+
+            prevDepth = node['_depth'];
+
+            push();
+                strokeWeight(1);
+                aValues[node.data()["key"]] = a;
+                line(aValues[parentNode.data()["key"]]+2, b, a, b);
+            pop();
+        }
+        
+
+        if (node.data()['key'] === logger.getIndex()) {
+            stroke(255, 0, 0);
+        } else if ( node.data()['key'] === val ) {
+            //TODO this is sometimes broken
+            stroke(255, 0, 255);
+        }
+
+        point(a, b);
+        stroke(0);
+    });
+    pop();
+    //---
+
+
+    // controls
+    // ---
     if (isUp) y -= 1;
     if (isDown) y += 1;
     if (isLeft) x -= 1;
@@ -279,51 +362,8 @@ function draw() {
     if (isGridDown) gridSpacing -= 0.1;
     if (isNoiseUp) noiseMultiplier += 0.1;
     if (isNoiseDown) noiseMultiplier -= 0.1;
-
-    if (frameCount % 100 == 0) {
-        logger.addElement(x,y,z,noiseMultiplier,gridSpacing);
-        // here we should also draw an extra tree 
-        tree = logger.getLog();
-    }
-    
-    push();
-    var a = 100, b = 100;
-    var prevDepth = 0;
-    strokeWeight(5);
-    tree.traverser().traverseDFS(function(node) {
-        if (prevDepth + 1 == node['_depth']) {
-            b += 6;
-            prevDepth = node['_depth'];
-        } else {
-            b = 100 + (6 * node['_depth']);
-            a += 10;
-            prevDepth = node['_depth'];
-            push();
-            strokeWeight(1);
-            // TODO this line needs to be better considered
-            // There's a 'findcommonparent' function
-            // or node.parentNode()
-            // DFS tells us parent will always be to the left
-            let parentNode = node.parentNode();
-            line(100, b, a, b);
-            pop();
-        }
-        
-
-        if (node.data()['key'] === logger.getIndex()-1 ) {
-            stroke(255, 0, 0);
-        } else if ( node.data()['key'] === val ) {
-            stroke(255, 0, 255);
-        }
-
-        point(a, b);
-        stroke(0);
-    });
-    pop();
-
-    val = floor(map(slider.value(), 0, 100, 0, logger.getIndex()-1));
+    //--
 }
-
 
 function windowResized() {
     resizeCanvas(innerWidth, innerHeight);
