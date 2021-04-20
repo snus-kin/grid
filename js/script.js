@@ -46,6 +46,15 @@ function toggleTransport() {
     }
 }
 
+function toggleMute() {
+    if (vol.mute == true) {
+        // switch style of button
+        vol.mute = false;
+    } else {
+        vol.mute = true;
+    }
+}
+
 // Download the tree as a JSON object in a file
 function downloadJson() {
     logger.downloadTree(seed);
@@ -110,8 +119,8 @@ function pickNextNote() {
  * Setup Synths
  * ============
  */
-let destinationGain = 0.5;
 let voiceIndex = 0;
+var gain = 0.1;
 const NUM_OSCS = 4;
 
 // let's not damage the speakers
@@ -122,13 +131,15 @@ const lpFilter = new Tone.Filter(20000, "lowpass");
 const reverb = new Tone.Reverb({"wet": 1, "decay": 1.5});
 const pingpong = new Tone.PingPongDelay("8n", 0.8);
 
+const vol = new Tone.Volume(0 - gain);
+
 const ACTIVE_EFFECTS = [hpFilter, lpFilter, reverb, pingpong];
-const DESTINATION_OUTPUT = new Tone.Gain(destinationGain).fan(
+const DESTINATION_OUTPUT = vol.chain(new Tone.Gain(0.5).fan(
     Tone.Destination,
-);
+));
 
 // chain all of effects (... spreads) to the output 
-const FX_BUS = new Tone.Gain(0.1).chain(...ACTIVE_EFFECTS, DESTINATION_OUTPUT);
+const FX_BUS = new Tone.Gain(0.3).chain(...ACTIVE_EFFECTS, DESTINATION_OUTPUT);
 
 // base frequency
 const bvoices = new Array(6).fill(new AdditiveSynth());
@@ -158,7 +169,7 @@ var noiseMultiplier = 0;
 var rows = 20;
 var cols = 20;
 var gridSize = 20;
-var gridSpacing = 20;
+var gridSpacing = 15;
 var n = 4;
 
 // Synth Control
@@ -209,6 +220,15 @@ function setup() {
     const initalState = {"x":x,"y":y,"z":z,"noiseMultiplier":noiseMultiplier,"gridSpacing":gridSpacing};
     logger = new Logger(seed, initalState);
     
+    volSlider = createSlider(0, 48, 48);
+    volSlider.class('volslider');
+    volSlider.position(innerWidth-160, innerHeight-40);
+    volSlider.size(150, 10);
+
+    muteButton = createButton('🕨');
+    muteButton.position(innerWidth-210, innerHeight-60);
+    muteButton.class('download button-style');
+    muteButton.mousePressed(toggleMute);
 
     download = createButton('↓');
     download.position(10, innerHeight-60);
@@ -225,6 +245,9 @@ function setup() {
     upload.position(70, innerHeight-60);
     upload.child(uploadInput);
 
+    // You can't style file inputs in CSS at all so if we make the button click
+    // the input for us we get around this issue, but we have to grab the
+    // elements directly in raw javascript instead of p5js
     const fin = document.querySelector("#uploadInput");
     const fib = document.querySelector("#uploadInputButton");
     fib.addEventListener('click', event => fin.click(event));
@@ -232,7 +255,7 @@ function setup() {
     tree = logger.getLog();
 
     // TODO reenable for music o nstartup
-    //Tone.Transport.toggle();
+    Tone.Transport.toggle();
 }
 
 function draw() {
@@ -355,6 +378,11 @@ function draw() {
     if (isNoiseUp) noiseMultiplier += 0.1;
     if (isNoiseDown) noiseMultiplier -= 0.1;
     //--
+    
+    gain = 0-map(volSlider.value(), 0, 48, 48, 0);
+    if (vol.mute != true) {
+        vol.volume.value = gain;
+    }
 }
 
 function windowResized() {

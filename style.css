@@ -2,6 +2,10 @@ body {
     margin: 0;
 }
 
+h1, h2, h3 {
+    margin: 5px 0px;
+}
+
 .button-style {
     background-color: #000;
     border: none;
@@ -19,6 +23,7 @@ body {
     top: 10px;
     right: 10px;
     pointer-events: none;
+    z-index: 2;
 }
 
 .download {
@@ -51,6 +56,7 @@ body {
     overflow: hidden;
 
     transition: 0.2s ease-in;
+    z-index: 1;
 }
 
 .window:hover {
@@ -62,4 +68,128 @@ body {
 
 .window-contents {
     padding: 10px;
+}
+
+.window a {
+    font-weight: bold;
+    color: #fff;
+    transition: 0.2s;
+    text-decoration: none;
+}
+
+.window a:hover {
+    color: #ddd;
+}
+
+.volslider {
+    display:block;
+    appearance: none;
+    height: 50px;
+    background: transparent;
+    outline: none;
+    border: none;
+    margin: 0;
+}
+
+.volslider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+}
+
+.volslider:focus {
+    outline:none;
+}
+
+.volslider::-ms-track {
+    width: 100%;
+    height: 50px;
+    
+    background: transparent;
+    border-color: transparent;
+    color: transparent;
+    border: none;
+}
+
+/* Special styling for WebKit/Blink */
+.volslider::-webkit-slider-thumb {
+    margin: 0;
+    -webkit-appearance: none;
+    height: 50px;
+    width: 16px;
+    background: #000;
+    cursor: pointer;
+    border: none;
+    border-radius: 0px;
+}
+
+/* All the same stuff for Firefox */
+.volslider::-moz-range-thumb {
+    margin: 0;
+    height: 50px;
+    width: 16px;
+    background: #000;
+    cursor: pointer;
+    border: none;
+    border-radius: 0px;
+}
+
+/* All the same stuff for IE */
+.volslider::-ms-thumb {
+    margin: 0;
+    height: 50px;
+    width: 16px;
+    background: #000;
+    cursor: pointer;
+    border: none;
+    border-radius: 0px;
+}
+
+/* Track */
+.volslider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 50px;
+  cursor: pointer;
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+  background: #3071a9;
+  border: none;
+}
+
+.volslider::-moz-range-track {
+  width: 100%;
+  height: 50px;
+  cursor: pointer;
+  background: #ddd;
+  border: none;
+}
+
+.volslider::-ms-track {
+  width: 100%;
+  height: 50px;
+  cursor: pointer;
+  background: transparent;
+  border-color: transparent;
+  border-width: 16px 0;
+  color: transparent;
+}
+
+.keylist {
+    padding-top: 5px;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.keylist > div {
+    flex: 1 1 150px;
+    padding-bottom: 5px;
+}
+
+.key {
+    display: inline-flex;
+    width: 25px;
+    height: 25px;
+    font-weight: bold;
+    background: #fff;
+    color: #000;
+    align-items: center;
+    justify-content: center;
 }

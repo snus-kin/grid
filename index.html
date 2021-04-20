@@ -13,32 +13,59 @@
         <script src="./js/logger.js"></script>
     </head>
     <body>
-        <div class="window">
-            <div class="window-contents">
-                <h1>Help</h1>
-                <h2>What is this?</h2>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                Integer nec odio. Praesent libero. Sed cursus ante dapibus
-                diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet.
-                Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed
-                augue semper porta. Mauris massa. Vestibulum lacinia arcu eget
-                nulla. </p>
-
-                <h2>Controls</h2>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                Integer nec odio. Praesent libero. Sed cursus ante dapibus
-                diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet.
-                Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed
-                augue semper porta. Mauris massa. Vestibulum lacinia arcu eget
-                nulla. </p>
-            </div>
-        </div>
-
         <!-- Create a button for user help page -->
         <main>
-            <!-- If I click this the help menu should stay open -->
-            <button class="help button-style">?</button>
         </main>
+
+        <!--TODO If I click this the help menu should stay open -->
+        <div class="window">
+            <div class="window-contents">
+                <h2>What is this?</h2>
+                <p>This piece is the product of my final year project, <i>"Using
+                Generative Art Technique to Explore the Work of Darrell
+                Viner"</i></p>
+
+                <p>Darrell Viner (1946-2001) was an early computer artist,
+                though his work was primarily sculpture, he produced many pen
+                plotter works <a href="https://collections.vam.ac.uk/search/?images_exist=true&page=1&id_person=A40101&id_technique=x43893">available
+                    to view at the V&A</a>.</p>
+
+                <p>This project seeks to allow you to explore some 'world'
+                which these images lived in, allowing you to modify parameters
+                to explore this landscape. There is also audio which is
+                generated based on these parameters.</p>
+
+                <p>All of this occurs in your browser, and is powered using <a
+                href="https://p5js.org/">p5.js</a> and <a
+            href="https://tonejs.github.io/">Tone.js</a>.
+
+                <h2>Controls</h2>
+                <img style="width: 100%; border:none;" src="./images/blankkeyboard.png">
+                <div class="keylist">
+                    <div><span class="key">W</span> - Move up </div>
+                    <div><span class="key">S</span> - Move down </div>
+                    <div><span class="key">A</span> - Move left </div>
+                    <div><span class="key">D</span> - Move right </div>
+                    <div><span class="key">E</span> - Move in </div>
+                    <div><span class="key">C</span> - Move out</div>
+                    <div><span class="key">Q</span> - Spacing up</div>
+                    <div><span class="key">Z</span> - Spacing down</div>
+                    <div><span class="key">I</span> - Randomness up</div>
+                    <div><span class="key">K</span> - Randomness down</div>
+                </div>
+
+                <h3>History</h3>
+                <p> On the left side of the screen a tree is growing, click one
+                of the circles to recall a previous state, after that it will
+                branch. Clicking the down button allows you to save your
+                history, the up button allows you to upload the files you've
+                previously downloaded.</p>
+
+                <h3>Audio</h3>
+                <p>In the bottom right a volume slider and a mute button are provided.</p>
+            </div>
+        </div>
+        <button class="help button-style">?</button>
 
         <!-- Load this here after DOM ready -->
         <script src="js/script.js"></script>
