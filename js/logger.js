@@ -7,7 +7,6 @@ class Logger {
 
     constructor(seed, initialState) {
         this.seed = seed;
-        
         this.previousNode = this.tree.insert({'key': this.index, value: initialState});
     }
 
@@ -19,51 +18,17 @@ class Logger {
         if (JSON.stringify(this.previousNode.data()["value"]) !=
                     JSON.stringify(potentialElement["value"])) {
             this.previousNode = this.tree.insertToNode(this.previousNode, potentialElement);
-            this.index ++;
+            this.index++;
         }
     }
     
-    // Used to travel upstream
-    setNode(index) {
-        this.previousNode = this.tree.traverser().searchBFS(function(data) {
-            return data.key === index;
+    // Get parameters at an index
+    getParameters(index) {
+        var node = this.tree.traverser().searchBFS(function(data) {
+            return data.key == index;
         });
-    }
-
-    // Recall between two indicies
-    getParameters(floor, ceil, t) {
-        // floor is the lower index, ceil is the higher, t should be a number
-        // from 0 - 1 that shows where you are between them 
-        //
-        // if ceil = floor + 1 maybe we can make this faster too
-        if (ceil % 1 == 0) {
-            var ceilNode = this.tree.traverser().searchBFS(function(data) {
-                return data.key == ceil;
-            });
-
-            this.previousNode = ceilNode;
-
-            return ceilNode.data()["value"];
-        } else {
-            // if index between two numbers interpolate
-            var ceilParams = this.tree.traverser().searchBFS(function(data) {
-                return data.key == ceil;
-            }).value;
-            
-            var floorParams = this.tree.traverser().searchBFS(function(data) {
-                return data.key == ceil;
-            }).value;
-            
-            var state = {}
-            
-            // loop through every key and set the state to the linear
-            // interpolation between the two 
-            for (var key in ceilParams) {
-                state[key] = lerp(ceilParams[key], floorParams[key], t);
-            } 
-
-            return state;
-        }
+        this.previousNode = node;
+        return node.data()["value"];
     }
 
     // Get current index
@@ -93,6 +58,7 @@ class Logger {
                     value: nodeData.value
             }
         }.bind(this));
+        this.index--;
     }
     
     downloadTree(seed) {

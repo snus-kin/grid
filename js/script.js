@@ -59,18 +59,13 @@ function uploadJson(file) {
         logger.importTree(file.data);
         noiseSeed(file.name.substring(0, file.name.length - 5));
         
-        let state = logger.getParameters(0,0,0);
-        x = state['x'];
-        y = state['y'];
-        z = state['z'];
-        gridSpacing = state['gridSpacing'];
-        noiseMultiplier = state['noiseMultiplier'];
+        loadState(logger.getIndex());
     }
 }
 
-function loadState() {
-    // load a state from the parameters, callback function for pressing 'ok'
-    let state = logger.getParameters(val,val,0);
+function loadState(id) {
+    // load a state from the parameters at 'id'
+    let state = logger.getParameters(id);
     x = state['x'];
     y = state['y'];
     z = state['z'];
@@ -150,10 +145,10 @@ const mvoices = new Array(6).fill(new AdditiveSynth());
 var logger;
 var currentTree, seed;
 var tree;
-let slider, button, val;
 var interval, n;
 var isUp, isDown, isLeft, isRight, isIn, isOut, isGridUp, isGridDown,
     isNoiseUp, isNoiseDown;
+var buttons = [];
 
 var x = 0;
 var y = 0;
@@ -214,14 +209,6 @@ function setup() {
     const initalState = {"x":x,"y":y,"z":z,"noiseMultiplier":noiseMultiplier,"gridSpacing":gridSpacing};
     logger = new Logger(seed, initalState);
 
-    slider = createSlider(0, 100, 0);
-    slider.position(0,0);
-    slider.style('width', '200px');
-
-    ok = createButton('ok');
-    ok.position(200, 0);
-    ok.mousePressed(loadState);
-
     download = createButton('download');
     download.position(300, 0);
     download.mousePressed(downloadJson);
@@ -232,13 +219,13 @@ function setup() {
     tree = logger.getLog();
 
     // TODO reenable for music o nstartup
-    Tone.Transport.toggle();
+    //Tone.Transport.toggle();
 }
 
 function draw() {
     // blank the screen every frame
     background(255);
-
+    //TODO make the scale work
 
     // grid
     // ---
@@ -304,47 +291,39 @@ function draw() {
         tree = logger.getLog();
     }
 
-    // get the value of the slider 
-    val = ceil(map(slider.value(), 0, 100, 0, logger.getIndex()));
-   
     // Draw the history tree
     push();
-    var a = 100, b = 100;
+    var a = 50, b = 50;
     var prevDepth = 0;
+    var treeButtonDiameter = 7;
     var parentNode;
-    var aValues = {};
-    strokeWeight(5);
+    var values = {};
+    buttons = [];
     tree.traverser().traverseDFS(function(node) {
-        if (prevDepth + 1 == node['_depth']) {
-            b += 6;
-            aValues[node.data()["key"]] = a;
+        if (prevDepth + 1 === node['_depth']) {
+            b += treeButtonDiameter+1;
+            values[node.data().key] = {'a':a, 'b':b};
             prevDepth = node['_depth'];
         } else {
             // get the parent node only when we branch
             parentNode = node.parentNode();
-            
-            b = 100 + (6 * node['_depth']);
-            a += 10;
+            // this is subtract something else
+            b = values[parentNode.data().key].b;
+            a += treeButtonDiameter*2;
 
             prevDepth = node['_depth'];
-
+            
+            // draw a line from the node to it's parent's
             push();
                 strokeWeight(1);
-                aValues[node.data()["key"]] = a;
-                line(aValues[parentNode.data()["key"]]+2, b, a, b);
+                values[node.data().key] = {'a':a, 'b':b};
+                line(values[parentNode.data().key].a + (treeButtonDiameter/2), b, a, b);
             pop();
         }
-        
 
-        if (node.data()['key'] === logger.getIndex()) {
-            stroke(255, 0, 0);
-        } else if ( node.data()['key'] === val ) {
-            //TODO this is sometimes broken
-            stroke(255, 0, 255);
-        }
-
-        point(a, b);
-        stroke(0);
+        let currentButton = new TreeButton(a, b, node.data().key, treeButtonDiameter);
+        currentButton.display(logger.getIndex());
+        buttons.push(currentButton);
     });
     pop();
     //---
@@ -381,4 +360,13 @@ function keyPressed() {
 
 function keyReleased() {
     setMove(key, false);
+}
+
+function mousePressed() {
+    // loop through buttons
+    buttons.forEach((button) => {
+        if (button.isHovered()) {
+            loadState(button.getId());
+        }
+    });
 }
