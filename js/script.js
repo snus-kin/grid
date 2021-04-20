@@ -208,13 +208,26 @@ function setup() {
     // setup logging
     const initalState = {"x":x,"y":y,"z":z,"noiseMultiplier":noiseMultiplier,"gridSpacing":gridSpacing};
     logger = new Logger(seed, initalState);
+    
 
-    download = createButton('download');
-    download.position(300, 0);
+    download = createButton('↓');
+    download.position(10, innerHeight-60);
+    download.class('download button-style');
     download.mousePressed(downloadJson);
 
-    upload = createFileInput(uploadJson);
-    upload.position(500, 0);
+    uploadInput = createFileInput(uploadJson);
+    uploadInput.id('uploadInput');
+    uploadInput.hide();
+
+    upload = createButton('↑');
+    upload.class('upload button-style');
+    upload.id("uploadInputButton");
+    upload.position(70, innerHeight-60);
+    upload.child(uploadInput);
+
+    const fin = document.querySelector("#uploadInput");
+    const fib = document.querySelector("#uploadInputButton");
+    fib.addEventListener('click', event => fin.click(event));
 
     tree = logger.getLog();
 
