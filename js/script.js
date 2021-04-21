@@ -222,17 +222,23 @@ function setup() {
     
     volSlider = createSlider(0, 48, 48);
     volSlider.class('volslider');
-    volSlider.position(innerWidth-160, innerHeight-40);
+    volSlider.style("position", "absolute");
+    volSlider.style("bottom", "30px");
+    volSlider.style("right", "10px");
     volSlider.size(150, 10);
 
     muteButton = createButton('🕨');
-    muteButton.position(innerWidth-210, innerHeight-60);
-    muteButton.class('download button-style');
+    muteButton.style("position", "absolute");
+    muteButton.style("bottom", "10px");
+    muteButton.style("right", "160px");
+    muteButton.class('button-style');
     muteButton.mousePressed(toggleMute);
 
     download = createButton('↓');
-    download.position(10, innerHeight-60);
-    download.class('download button-style');
+    download.style("position", "absolute");
+    download.style("bottom", "10px");
+    download.style("left", "10px");
+    download.class('button-style');
     download.mousePressed(downloadJson);
 
     uploadInput = createFileInput(uploadJson);
@@ -242,7 +248,9 @@ function setup() {
     upload = createButton('↑');
     upload.class('upload button-style');
     upload.id("uploadInputButton");
-    upload.position(70, innerHeight-60);
+    upload.style("position", "absolute");
+    upload.style("bottom", "10px");
+    upload.style("left", "70px");
     upload.child(uploadInput);
 
     // You can't style file inputs in CSS at all so if we make the button click
