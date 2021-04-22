@@ -22,7 +22,7 @@ h1, h2, h3 {
 
 .window:hover {
     height: calc(100vh - 20px);
-    width: 35vw;
+    width: 40vw;
     transition: 0.2s ease-in;
 }
 
