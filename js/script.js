@@ -246,7 +246,7 @@ function setup() {
     uploadInput.hide();
 
     upload = createButton('↑');
-    upload.class('upload button-style');
+    upload.class('button-style');
     upload.id("uploadInputButton");
     upload.style("position", "absolute");
     upload.style("bottom", "10px");
