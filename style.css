@@ -7,7 +7,7 @@ h1, h2, h3 {
 }
 
 .window {
-    background-color: #000;
+    background-color: rgba(0, 0, 0, 0.8);
     color: #fff; 
     position:absolute;
     top: 10px;
@@ -22,8 +22,7 @@ h1, h2, h3 {
 
 .window:hover {
     height: calc(100vh - 20px);
-    width: 45vw;
-
+    width: 35vw;
     transition: 0.2s ease-in;
 }
 
@@ -61,6 +60,11 @@ h1, h2, h3 {
 
 .window-contents {
     padding: 10px;
+}
+
+.window img {
+    width: 100%; 
+    border:none;
 }
 
 .window a {
@@ -165,7 +169,7 @@ h1, h2, h3 {
 
 .keylist {
     padding-top: 5px;
-    width: 100%;
+    width: 50%;
     display: flex;
     flex-wrap: wrap;
 }
@@ -184,4 +188,17 @@ h1, h2, h3 {
     color: #000;
     align-items: center;
     justify-content: center;
+}
+
+@media only screen and (max-height: 1000px) {
+    .window:hover {
+        width: calc(100vw - 20px);
+    }
+
+    .window img {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        width: 30%;
+    }
 }
