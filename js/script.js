@@ -277,7 +277,7 @@ function draw() {
     strokeWeight(2);
     stroke(0);
     
-    translate((innerWidth/2) + (0-x), (innerHeight/2) + (0-y));
+    translate((innerWidth/2) - x, (innerHeight/2) - y);
     
     var sx, sy, ox, oy;
     for (j = 0; j < rows; j++) {
