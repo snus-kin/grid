@@ -1,5 +1,6 @@
 # grid
 Use the program here: https://snus-kin.github.io/grid/
+
 NB: some chrome users have said audio didn't play for them, try pressing space or using firefox
 
 ## information
