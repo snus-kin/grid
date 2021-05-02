@@ -262,14 +262,12 @@ function setup() {
 
     tree = logger.getLog();
 
-    // TODO reenable for music o nstartup
     Tone.Transport.toggle();
 }
 
 function draw() {
     // blank the screen every frame
     background(255);
-    //TODO make the scale work
 
     // grid
     // ---
