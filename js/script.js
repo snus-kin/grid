@@ -349,7 +349,6 @@ function draw() {
         } else {
             // get the parent node only when we branch
             parentNode = node.parentNode();
-            // this is subtract something else
             b = values[parentNode.data().key].b;
             a += treeButtonDiameter*2;
 
